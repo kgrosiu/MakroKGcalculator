@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MakroFlow" />
+  <meta name="theme-color" content="#080c14" />
+  <title>MakroFlow — Kalkulator Kalorii & Makro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: { 850: '#151e2e', 900: '#0f172a', 950: '#080c14' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #080c14; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="min-h-screen pb-24">
+  <div class="max-w-xl mx-auto px-4 pt-6 space-y-5">
+    <header class="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white">MakroFlow</h1>
+        <p class="text-xs text-slate-400">Kalkulator kalorii, makroskładników i wagi</p>
+      </div>
+      <button id="btnReset" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+        Reset danych
+      </button>
+    </header>
+
+    <!-- Cele dzienne -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-200">Cel dzienny</h2>
+        <span id="diffKcal" class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums">0 kcal</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Cel kalorii (kcal)</label>
+          <input id="targetKcal" type="number" value="2050" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Białko (g)</label>
+          <input id="targetP" type="number" value="145" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Tłuszcze (g)</label>
+          <input id="targetF" type="number" value="68" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Węglowodany (g)</label>
+          <input id="targetC" type="number" value="215" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+        </div>
+      </div>
+
+      <!-- Podsumowanie dzisiejszego dnia -->
+      <div class="pt-2 border-t border-slate-800/80 space-y-2">
+        <div class="flex justify-between text-xs">
+          <span class="text-slate-400">Zjedzono dziś:</span>
+          <span id="sumKcal" class="font-bold text-white tabular-nums">0 / 2050 kcal</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="barKcal" class="h-full bg-emerald-400 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 pt-1 text-center tabular-nums">
+          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
+            <div class="text-[10px] text-slate-400">Białko</div>
+            <div id="sumP" class="text-xs font-semibold text-sky-300">0 / 145g</div>
+          </div>
+          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
+            <div class="text-[10px] text-slate-400">Tłuszcze</div>
+            <div id="sumF" class="text-xs font-semibold text-amber-300">0 / 68g</div>
+          </div>
+          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
+            <div class="text-[10px] text-slate-400">Węgle</div>
+            <div id="sumC" class="text-xs font-semibold text-violet-300">0 / 215g</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dodawanie posiłku -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+      <h2 class="text-sm font-semibold text-slate-200">Dodaj posiłek</h2>
+      <input id="mealName" type="text" placeholder="Nazwa posiłku (np. Kurczak + ryż)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+      <div class="grid grid-cols-4 gap-2">
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Kcal</label>
+          <input id="mealKcal" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Białko</label>
+          <input id="mealP" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Tłuszcze</label>
+          <input id="mealF" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Węgle</label>
+          <input id="mealC" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+      </div>
+      <button id="btnAddMeal" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">
+        + Dodaj do dzisiejszego dnia
+      </button>
+    </section>
+
+    <!-- Lista dzisiejszych posiłków -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2.5">
+      <h2 class="text-sm font-semibold text-slate-200">Dzisiejsze posiłki</h2>
+      <ul id="mealList" class="space-y-2 text-sm"></ul>
+    </section>     <!-- Szybki kalkulator BMR / TDEE / cel -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+      <h2 class="text-sm font-semibold text-slate-200">Szybki kalkulator zapotrzebowania</h2>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Waga (kg)</label>
+          <input id="calcWeight" type="number" step="0.1" value="102.9" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Wzrost (cm)</label>
+          <input id="calcHeight" type="number" value="184" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Wiek (lata)</label>
+          <input id="calcAge" type="number" value="19" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Aktywność (NEAT / ruch)</label>
+          <select id="calcActivity" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white">
+            <option value="1.2">Mała aktywność (1.2)</option>
+            <option value="1.375" selected>Lekka / kroki 5–8k (1.375)</option>
+            <option value="1.55">Umiarkowana / kroki 8–10k+ (1.55)</option>
+            <option value="1.725">Wysoka (1.725)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Cel</label>
+          <select id="calcGoal" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white">
+            <option value="-500" selected>Redukcja (-500 kcal)</option>
+            <option value="-350">Lekka redukcja (-350 kcal)</option>
+            <option value="0">Utrzymanie (0 kcal)</option>
+            <option value="300">Lekka masa (+300 kcal)</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+        <div class="text-xs text-slate-300 tabular-nums">
+          Proponowany cel: <span id="calcResult" class="font-bold text-emerald-400">2050 kcal</span>
+        </div>
+        <button id="btnApplyTarget" class="text-xs px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold">
+          Zastosuj cel
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'makroflow_v1';
+    const defaultState = {
+      targets: { kcal: 2050, p: 145, f: 68, c: 215 },
+      meals: []
+    };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(defaultState);
+        return { ...structuredClone(defaultState), ...JSON.parse(raw) };
+      } catch {
+        return structuredClone(defaultState);
+      }
+    }
+
+    let state = loadState();
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function calcSuggested() {
+      const w = parseFloat(document.getElementById('calcWeight').value) || 0;
+      const h = parseFloat(document.getElementById('calcHeight').value) || 0;
+      const a = parseFloat(document.getElementById('calcAge').value) || 0;
+      const act = parseFloat(document.getElementById('calcActivity').value) || 1.375;
+      const goal = parseFloat(document.getElementById('calcGoal').value) || 0;
+      const bmr = 10 * w + 6.25 * h - 5 * a + 5;
+      const tdee = bmr * act;
+      const suggested = Math.max(1200, Math.round((tdee + goal) / 10) * 10);
+      document.getElementById('calcResult').textContent = `${suggested} kcal`;
+      return suggested;
+    }
+
+    function render() {
+      document.getElementById('targetKcal').value = state.targets.kcal;
+      document.getElementById('targetP').value = state.targets.p;
+      document.getElementById('targetF').value = state.targets.f;
+      document.getElementById('targetC').value = state.targets.c;
+
+      const totals = state.meals.reduce((acc, m) => {
+        acc.kcal += Number(m.kcal) || 0;
+        acc.p += Number(m.p) || 0;
+        acc.f += Number(m.f) || 0;
+        acc.c += Number(m.c) || 0;
+        return acc;
+      }, { kcal: 0, p: 0, f: 0, c: 0 });
+
+      const diff = state.targets.kcal - totals.kcal;
+      const diffEl = document.getElementById('diffKcal');
+      diffEl.textContent = diff >= 0 ? `Zostało ${diff} kcal` : `Przekroczono o ${Math.abs(diff)} kcal`;
+      diffEl.className = diff >= 0
+        ? 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums'
+        : 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 tabular-nums';
+
+      document.getElementById('sumKcal').textContent = `${totals.kcal} / ${state.targets.kcal} kcal`;
+      document.getElementById('sumP').textContent = `${totals.p} / ${state.targets.p}g`;
+      document.getElementById('sumF').textContent = `${totals.f} / ${state.targets.f}g`;
+      document.getElementById('sumC').textContent = `${totals.c} / ${state.targets.c}g`;
+
+      const pct = state.targets.kcal > 0 ? Math.min(100, Math.round((totals.kcal / state.targets.kcal) * 100)) : 0;
+      document.getElementById('barKcal').style.width = `${pct}%`;
+
+      const list = document.getElementById('mealList');
+      list.innerHTML = '';
+      if (state.meals.length === 0) {
+        list.innerHTML = '<li class="text-xs text-slate-500 py-2">Brak dodanych posiłków.</li>';
+      } else {
+        state.meals.forEach((m, idx) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between bg-slate-950/80 border border-slate-800/80 rounded-xl px-3 py-2';
+          li.innerHTML = `
+            <div>
+              <div class="font-medium text-slate-100">${m.name || 'Posiłek'}</div>
+              <div class="text-[11px] text-slate-400 tabular-nums">${m.kcal} kcal · B: ${m.p}g · T: ${m.f}g · W: ${m.c}g</div>
+            </div>
+            <button data-idx="${idx}" class="btnDel text-xs px-2 py-1 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/25">Usuń</button>
+          `;
+          list.appendChild(li);
+        });
+      }
+
+      document.querySelectorAll('.btnDel').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.meals.splice(Number(btn.dataset.idx), 1);
+          saveState();
+          render();
+        });
+      });
+
+      calcSuggested();
+    }
+
+    ['targetKcal', 'targetP', 'targetF', 'targetC'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        state.targets = {
+          kcal: Number(document.getElementById('targetKcal').value) || 0,
+          p: Number(document.getElementById('targetP').value) || 0,
+          f: Number(document.getElementById('targetF').value) || 0,
+          c: Number(document.getElementById('targetC').value) || 0
+        };
+        saveState();
+        render();
+      });
+    });
+
+    document.getElementById('btnAddMeal').addEventListener('click', () => {
+      const name = document.getElementById('mealName').value.trim();
+      const kcal = Number(document.getElementById('mealKcal').value) || 0;
+      const p = Number(document.getElementById('mealP').value) || 0;
+      const f = Number(document.getElementById('mealF').value) || 0;
+      const c = Number(document.getElementById('mealC').value) || 0;
+      if (!name && kcal === 0 && p === 0 && f === 0 && c === 0) return;
+
+      state.meals.push({ name: name || 'Posiłek', kcal, p, f, c });
+      document.getElementById('mealName').value = '';
+      document.getElementById('mealKcal').value = '';
+      document.getElementById('mealP').value = '';
+      document.getElementById('mealF').value = '';
+      document.getElementById('mealC').value = '';
+      saveState();
+      render();
+    });
+
+    ['calcWeight', 'calcHeight', 'calcAge', 'calcActivity', 'calcGoal'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcSuggested);
+      document.getElementById(id).addEventListener('change', calcSuggested);
+    });
+
+    document.getElementById('btnApplyTarget').addEventListener('click', () => {
+      const kcal = calcSuggested();
+      state.targets.kcal = kcal;
+      state.targets.p = Math.round(kcal * 0.28 / 4);
+      state.targets.f = Math.round(kcal * 0.30 / 9);
+      state.targets.c = Math.max(0, Math.round((kcal - state.targets.p * 4 - state.targets.f * 9) / 4));
+      saveState();
+      render();
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      state = structuredClone(defaultState);
+      saveState();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
+
