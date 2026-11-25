@@ -5,318 +5,554 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MakroFlow" />
-  <meta name="theme-color" content="#080c14" />
-  <title>MakroFlow — Kalkulator Kalorii & Makro</title>
+  <meta name="apple-mobile-web-app-title" content="KcalGrid" />
+  <meta name="theme-color" content="#05070c" />
+  <title>KcalGrid — Uniwersalny Kalkulator Kalorii</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            slate: { 850: '#151e2e', 900: '#0f172a', 950: '#080c14' }
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body { background-color: #080c14; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    :root { color-scheme: dark; }
+    body {
+      background-color: #05070c;
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.11), transparent 55%),
+        radial-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px, 48px 48px, 48px 48px;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
     .tabular-nums { font-variant-numeric: tabular-nums; }
+    .panel {
+      background: rgba(11, 15, 25, 0.86);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
   </style>
 </head>
 <body class="min-h-screen pb-24">
-  <div class="max-w-xl mx-auto px-4 pt-6 space-y-5">
-    <header class="flex items-center justify-between border-b border-slate-800 pb-4">
+  <div class="max-w-xl mx-auto px-4 pt-5 space-y-4">
+    <!-- Nagłówek -->
+    <header class="flex items-center justify-between">
       <div>
-        <h1 class="text-xl font-bold tracking-tight text-white">MakroFlow</h1>
-        <p class="text-xs text-slate-400">Kalkulator kalorii, makroskładników i wagi</p>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]"></span>
+          <h1 class="text-lg font-extrabold tracking-tight text-white">KcalGrid</h1>
+        </div>
+        <p id="dateLabel" class="text-xs text-slate-400 tabular-nums"></p>
       </div>
-      <button id="btnReset" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
-        Reset danych
-      </button>
+      <div class="flex items-center gap-1.5">
+        <button id="btnPrev" class="px-2.5 py-1.5 rounded-xl panel text-xs text-slate-300 active:scale-95">‹</button>
+        <button id="btnToday" class="px-3 py-1.5 rounded-xl panel text-xs font-semibold text-emerald-300 active:scale-95">Dziś</button>
+        <button id="btnNext" class="px-2.5 py-1.5 rounded-xl panel text-xs text-slate-300 active:scale-95">›</button>
+      </div>
     </header>
 
-    <!-- Cele dzienne -->
-    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4">
+    <!-- Główny licznik kalorii -->
+    <section class="panel rounded-3xl p-5 space-y-4 shadow-2xl">
+      <div class="flex items-end justify-between gap-3">
+        <div>
+          <div class="text-[11px] uppercase tracking-wider text-slate-400">Pozostało</div>
+          <div id="remKcal" class="text-4xl font-black text-emerald-400 tabular-nums leading-none mt-1">2200</div>
+          <div id="remSub" class="text-xs text-slate-400 mt-1.5 tabular-nums">z 2200 kcal</div>
+        </div>
+        <div class="text-right tabular-nums space-y-1">
+          <div class="text-xs text-slate-400">Zjedzone: <span id="eatenKcal" class="text-white font-bold">0</span> kcal</div>
+          <div class="text-xs text-slate-400">Średnia 7d: <span id="avg7Kcal" class="text-cyan-300 font-bold">0</span> kcal</div>
+          <div class="text-xs text-slate-400">Wpisów: <span id="entryCount" class="text-slate-200 font-semibold">0</span></div>
+        </div>
+      </div>
+
+      <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+        <div id="progBar" class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
+      </div>
+
+      <!-- Szybkie przyciski +/- kcal -->
+      <div class="grid grid-cols-4 gap-2 pt-1">
+        <button data-delta="100" class="quickKcal py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-emerald-300 tabular-nums active:scale-95">+100</button>
+        <button data-delta="250" class="quickKcal py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-emerald-300 tabular-nums active:scale-95">+250</button>
+        <button data-delta="500" class="quickKcal py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-emerald-300 tabular-nums active:scale-95">+500</button>
+        <button id="btnCopyPrev" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-semibold text-cyan-300 active:scale-95">Kopiuj wczoraj</button>
+      </div>
+    </section>
+
+    <!-- Dodawanie pozycji + przelicznik z gramów na 100g -->
+    <section class="panel rounded-3xl p-4 space-y-3">
       <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-slate-200">Cel dzienny</h2>
-        <span id="diffKcal" class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums">0 kcal</span>
+        <h2 class="text-sm font-bold text-white">Dodaj kalorie</h2>
+        <button id="toggleGrams" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-cyan-300 font-medium">
+          Przelicznik z gramów
+        </button>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <input id="itemName" type="text" placeholder="Co jesz? (np. obiad, przekąska, napój)" class="w-full bg-slate-950/90 border border-slate-800 focus:border-emerald-400 outline-none rounded-xl px-3 py-2.5 text-sm text-white" />
+
+      <div id="gramsPanel" class="hidden grid-cols-2 gap-2 p-3 rounded-2xl bg-slate-950/80 border border-cyan-500/25">
         <div>
-          <label class="block text-[11px] text-slate-400 mb-1">Cel kalorii (kcal)</label>
-          <input id="targetKcal" type="number" value="2050" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+          <label class="block text-[10px] text-cyan-300 mb-1">Kcal na 100 g</label>
+          <input id="kcalPer100" type="number" inputmode="decimal" placeholder="np. 150" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
         <div>
-          <label class="block text-[11px] text-slate-400 mb-1">Białko (g)</label>
-          <input id="targetP" type="number" value="145" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
-        </div>
-        <div>
-          <label class="block text-[11px] text-slate-400 mb-1">Tłuszcze (g)</label>
-          <input id="targetF" type="number" value="68" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
-        </div>
-        <div>
-          <label class="block text-[11px] text-slate-400 mb-1">Węglowodany (g)</label>
-          <input id="targetC" type="number" value="215" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white tabular-nums" />
+          <label class="block text-[10px] text-cyan-300 mb-1">Twoja porcja (g)</label>
+          <input id="portionGrams" type="number" inputmode="decimal" placeholder="np. 250" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
       </div>
 
-      <!-- Podsumowanie dzisiejszego dnia -->
-      <div class="pt-2 border-t border-slate-800/80 space-y-2">
-        <div class="flex justify-between text-xs">
-          <span class="text-slate-400">Zjedzono dziś:</span>
-          <span id="sumKcal" class="font-bold text-white tabular-nums">0 / 2050 kcal</span>
-        </div>
-        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
-          <div id="barKcal" class="h-full bg-emerald-400 transition-all duration-300" style="width: 0%"></div>
-        </div>
-        <div class="grid grid-cols-3 gap-2 pt-1 text-center tabular-nums">
-          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
-            <div class="text-[10px] text-slate-400">Białko</div>
-            <div id="sumP" class="text-xs font-semibold text-sky-300">0 / 145g</div>
-          </div>
-          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
-            <div class="text-[10px] text-slate-400">Tłuszcze</div>
-            <div id="sumF" class="text-xs font-semibold text-amber-300">0 / 68g</div>
-          </div>
-          <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
-            <div class="text-[10px] text-slate-400">Węgle</div>
-            <div id="sumC" class="text-xs font-semibold text-violet-300">0 / 215g</div>
-          </div>
-        </div>
+      <div class="flex gap-2">
+        <input id="itemKcal" type="number" inputmode="numeric" placeholder="Kalorie (kcal)" class="flex-1 bg-slate-950/90 border border-slate-800 focus:border-emerald-400 outline-none rounded-xl px-3 py-2.5 text-sm text-white font-semibold tabular-nums" />
+        <button id="btnAddItem" class="px-5 py-2.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-sm active:scale-95">
+          Dodaj
+        </button>
+        <button id="btnSaveFav" title="Zapisz jako szybki szablon" class="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 font-bold text-sm active:scale-95">
+          ★
+        </button>
+      </div>
+
+      <!-- Szybkie szablony użytkownika -->
+      <div id="favContainer" class="pt-1 hidden">
+        <div class="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">Zapisane szablony (kliknij, aby dodać)</div>
+        <div id="favList" class="flex flex-wrap gap-1.5"></div>
       </div>
     </section>
 
-    <!-- Dodawanie posiłku -->
-    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
-      <h2 class="text-sm font-semibold text-slate-200">Dodaj posiłek</h2>
-      <input id="mealName" type="text" placeholder="Nazwa posiłku (np. Kurczak + ryż)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
-      <div class="grid grid-cols-4 gap-2">
-        <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Kcal</label>
-          <input id="mealKcal" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
-        </div>
-        <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Białko</label>
-          <input id="mealP" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
-        </div>
-        <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Tłuszcze</label>
-          <input id="mealF" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
-        </div>
-        <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Węgle</label>
-          <input id="mealC" type="number" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
-        </div>
+    <!-- Lista wpisów wybranego dnia -->
+    <section class="panel rounded-3xl p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-white">Wpisy dnia</h2>
+        <button id="btnClearDay" class="text-[11px] text-rose-400 hover:text-rose-300">Wyczyść dzień</button>
       </div>
-      <button id="btnAddMeal" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm">
-        + Dodaj do dzisiejszego dnia
-      </button>
-    </section>
+      <ul id="itemList" class="space-y-2"></ul>
+    </section>     <!-- Kalkulator zapotrzebowania + prognoza wagi -->
+    <section class="panel rounded-3xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-white">Kalkulator celu & prognoza wagi</h2>
+        <span id="etaBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold tabular-nums">Cel: 2200 kcal</span>
+      </div>
 
-    <!-- Lista dzisiejszych posiłków -->
-    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-2.5">
-      <h2 class="text-sm font-semibold text-slate-200">Dzisiejsze posiłki</h2>
-      <ul id="mealList" class="space-y-2 text-sm"></ul>
-    </section>     <!-- Szybki kalkulator BMR / TDEE / cel -->
-    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
-      <h2 class="text-sm font-semibold text-slate-200">Szybki kalkulator zapotrzebowania</h2>
       <div class="grid grid-cols-3 gap-2">
         <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Waga (kg)</label>
-          <input id="calcWeight" type="number" step="0.1" value="102.9" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+          <label class="block text-[10px] text-slate-400 mb-1">Waga start (kg)</label>
+          <input id="wStart" type="number" step="0.1" value="80" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
         <div>
           <label class="block text-[10px] text-slate-400 mb-1">Wzrost (cm)</label>
-          <input id="calcHeight" type="number" value="184" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+          <input id="hCm" type="number" value="180" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
         <div>
           <label class="block text-[10px] text-slate-400 mb-1">Wiek (lata)</label>
-          <input id="calcAge" type="number" value="19" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
+          <input id="ageYr" type="number" value="25" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-2">
+
+      <div class="grid grid-cols-3 gap-2">
         <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Aktywność (NEAT / ruch)</label>
-          <select id="calcActivity" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white">
-            <option value="1.2">Mała aktywność (1.2)</option>
-            <option value="1.375" selected>Lekka / kroki 5–8k (1.375)</option>
-            <option value="1.55">Umiarkowana / kroki 8–10k+ (1.55)</option>
+          <label class="block text-[10px] text-slate-400 mb-1">Płeć</label>
+          <select id="sexSel" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white">
+            <option value="m" selected>Mężczyzna</option>
+            <option value="f">Kobieta</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Aktywność</label>
+          <select id="actSel" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2 py-2 text-xs text-white">
+            <option value="1.2">Niska (1.2)</option>
+            <option value="1.375" selected>Lekka (1.375)</option>
+            <option value="1.55">Średnia (1.55)</option>
             <option value="1.725">Wysoka (1.725)</option>
           </select>
         </div>
         <div>
-          <label class="block text-[10px] text-slate-400 mb-1">Cel</label>
-          <select id="calcGoal" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white">
-            <option value="-500" selected>Redukcja (-500 kcal)</option>
-            <option value="-350">Lekka redukcja (-350 kcal)</option>
-            <option value="0">Utrzymanie (0 kcal)</option>
-            <option value="300">Lekka masa (+300 kcal)</option>
-          </select>
+          <label class="block text-[10px] text-slate-400 mb-1">Waga docelowa</label>
+          <input id="wGoal" type="number" step="0.1" value="75" class="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white tabular-nums" />
         </div>
       </div>
-      <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
-        <div class="text-xs text-slate-300 tabular-nums">
-          Proponowany cel: <span id="calcResult" class="font-bold text-emerald-400">2050 kcal</span>
+
+      <!-- Suwak kalorii względem TDEE -->
+      <div class="pt-1 space-y-1.5">
+        <div class="flex justify-between text-xs tabular-nums">
+          <span class="text-slate-400">Korekta względem TDEE:</span>
+          <span id="deltaTxt" class="font-bold text-cyan-300">-400 kcal / dzień</span>
         </div>
-        <button id="btnApplyTarget" class="text-xs px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold">
-          Zastosuj cel
+        <input id="deltaRange" type="range" min="-900" max="700" step="50" value="-400" class="w-full accent-emerald-400" />
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 gap-2">
+        <div class="text-xs text-slate-300 tabular-nums">
+          <div>Cel: <span id="calcTargetOut" class="font-extrabold text-emerald-400">2200 kcal</span></div>
+          <div id="forecastOut" class="text-[11px] text-slate-400">Szacowany czas: ~9 tyg.</div>
+        </div>
+        <button id="btnApplyGoal" class="px-3.5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs active:scale-95">
+          Ustaw jako cel
         </button>
+      </div>
+    </section>
+
+    <!-- Kopia zapasowa / Reset -->
+    <section class="panel rounded-3xl p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Kopia danych (JSON)</h2>
+        <button id="btnFactoryReset" class="text-[11px] text-rose-400 hover:text-rose-300">Reset całości</button>
+      </div>
+      <textarea id="ioBox" rows="2" placeholder="Eksportuje Twoje dane albo wklej tu kod kopii, aby przywrócić..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 text-[11px] text-slate-300 tabular-nums"></textarea>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btnExport" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-300">Eksportuj dane</button>
+        <button id="btnImport" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-cyan-300">Importuj dane</button>
       </div>
     </section>
   </div>
 
   <script>
-    const STORAGE_KEY = 'makroflow_v1';
-    const defaultState = {
-      targets: { kcal: 2050, p: 145, f: 68, c: 215 },
-      meals: []
+    const KEY = 'kcalgrid_v1';
+    const baseState = {
+      goalKcal: 2200,
+      days: {},
+      favs: [
+        { name: 'Posiłek 300 kcal', kcal: 300 },
+        { name: 'Przekąska 150 kcal', kcal: 150 },
+        { name: 'Obiad 650 kcal', kcal: 650 }
+      ],
+      profile: { wStart: 80, hCm: 180, ageYr: 25, sex: 'm', act: 1.375, wGoal: 75, delta: -400 }
     };
 
-    function loadState() {
+    function dayKey(offsetDays = 0) {
+      const d = new Date();
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + offsetDays);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function formatDateLabel(offsetDays) {
+      const d = new Date();
+      d.setHours(12, 0, 0, 0);
+      d.setDate(d.getDate() + offsetDays);
+      const tag = offsetDays === 0 ? ' • Dziś' : offsetDays === -1 ? ' • Wczoraj' : offsetDays === 1 ? ' • Jutro' : '';
+      return d.toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }) + tag;
+    }
+
+    function load() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return structuredClone(defaultState);
-        return { ...structuredClone(defaultState), ...JSON.parse(raw) };
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return structuredClone(baseState);
+        const parsed = JSON.parse(raw);
+        return {
+          ...structuredClone(baseState),
+          ...parsed,
+          days: parsed.days || {},
+          favs: Array.isArray(parsed.favs) ? parsed.favs : baseState.favs,
+          profile: { ...baseState.profile, ...(parsed.profile || {}) }
+        };
       } catch {
-        return structuredClone(defaultState);
+        return structuredClone(baseState);
       }
     }
 
-    let state = loadState();
+    let state = load();
+    let offset = 0;
 
-    function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify(state));
     }
 
-    function calcSuggested() {
-      const w = parseFloat(document.getElementById('calcWeight').value) || 0;
-      const h = parseFloat(document.getElementById('calcHeight').value) || 0;
-      const a = parseFloat(document.getElementById('calcAge').value) || 0;
-      const act = parseFloat(document.getElementById('calcActivity').value) || 1.375;
-      const goal = parseFloat(document.getElementById('calcGoal').value) || 0;
-      const bmr = 10 * w + 6.25 * h - 5 * a + 5;
-      const tdee = bmr * act;
-      const suggested = Math.max(1200, Math.round((tdee + goal) / 10) * 10);
-      document.getElementById('calcResult').textContent = `${suggested} kcal`;
-      return suggested;
+    function getDayItems(k) {
+      if (!Array.isArray(state.days[k])) state.days[k] = [];
+      return state.days[k];
+    }
+
+    function addEntry(name, kcal) {
+      const val = Math.round(Number(kcal) || 0);
+      if (val === 0 && !name.trim()) return;
+      const k = dayKey(offset);
+      const items = getDayItems(k);
+      items.push({
+        id: Date.now() + Math.random().toString(36).slice(2, 6),
+        name: (name || 'Szybki wpis').trim(),
+        kcal: val
+      });
+      save();
+      render();
+    }
+
+    function updateCalc() {
+      const w = parseFloat(document.getElementById('wStart').value) || 0;
+      const h = parseFloat(document.getElementById('hCm').value) || 0;
+      const a = parseFloat(document.getElementById('ageYr').value) || 0;
+      const sex = document.getElementById('sexSel').value;
+      const act = parseFloat(document.getElementById('actSel').value) || 1.375;
+      const wGoal = parseFloat(document.getElementById('wGoal').value) || w;
+      const delta = parseInt(document.getElementById('deltaRange').value, 10) || 0;
+
+      state.profile = { wStart: w, hCm: h, ageYr: a, sex, act, wGoal, delta };
+      save();
+
+      const bmr = 10 * w + 6.25 * h - 5 * a + (sex === 'm' ? 5 : -161);
+      const tdee = Math.round(bmr * act);
+      const target = Math.max(1100, Math.round((tdee + delta) / 10) * 10);
+
+      const dEl = document.getElementById('deltaTxt');
+      dEl.textContent = `${delta > 0 ? '+' : ''}${delta} kcal / dzień (TDEE ~${tdee})`;
+      dEl.className = delta < 0
+        ? 'font-bold text-emerald-300'
+        : delta > 0
+          ? 'font-bold text-amber-300'
+          : 'font-bold text-cyan-300';
+
+      document.getElementById('calcTargetOut').textContent = `${target} kcal`;
+      document.getElementById('etaBadge').textContent = `Cel: ${target} kcal`;
+
+      const diffKg = Math.abs(wGoal - w);
+      const weeklyKcalChange = Math.abs(delta) * 7;
+      const kgPerWeek = weeklyKcalChange / 7700;
+
+      const fEl = document.getElementById('forecastOut');
+      if (diffKg < 0.1) {
+        fEl.textContent = 'Waga już na celu';
+      } else if (kgPerWeek < 0.05) {
+        fEl.textContent = `Różnica ${diffKg.toFixed(1)} kg (zbyt mała korekta na prognozę)`;
+      } else {
+        const weeks = Math.ceil(diffKg / kgPerWeek);
+        const dir = wGoal < w ? 'redukcji' : 'przyrostu';
+        fEl.textContent = `~${weeks} tyg. ${dir} (${kgPerWeek.toFixed(2)} kg/tydz. dla ${diffKg.toFixed(1)} kg)`;
+      }
+
+      return target;
     }
 
     function render() {
-      document.getElementById('targetKcal').value = state.targets.kcal;
-      document.getElementById('targetP').value = state.targets.p;
-      document.getElementById('targetF').value = state.targets.f;
-      document.getElementById('targetC').value = state.targets.c;
+      document.getElementById('dateLabel').textContent = formatDateLabel(offset);
+      document.getElementById('btnToday').textContent = offset === 0 ? 'Dziś' : 'Wróć dziś';
 
-      const totals = state.meals.reduce((acc, m) => {
-        acc.kcal += Number(m.kcal) || 0;
-        acc.p += Number(m.p) || 0;
-        acc.f += Number(m.f) || 0;
-        acc.c += Number(m.c) || 0;
-        return acc;
-      }, { kcal: 0, p: 0, f: 0, c: 0 });
+      const k = dayKey(offset);
+      const items = getDayItems(k);
+      const eaten = items.reduce((s, x) => s + (Number(x.kcal) || 0), 0);
+      const goal = Number(state.goalKcal) || 2200;
+      const rem = goal - eaten;
 
-      const diff = state.targets.kcal - totals.kcal;
-      const diffEl = document.getElementById('diffKcal');
-      diffEl.textContent = diff >= 0 ? `Zostało ${diff} kcal` : `Przekroczono o ${Math.abs(diff)} kcal`;
-      diffEl.className = diff >= 0
-        ? 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 tabular-nums'
-        : 'text-xs font-medium px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-300 tabular-nums';
-
-      document.getElementById('sumKcal').textContent = `${totals.kcal} / ${state.targets.kcal} kcal`;
-      document.getElementById('sumP').textContent = `${totals.p} / ${state.targets.p}g`;
-      document.getElementById('sumF').textContent = `${totals.f} / ${state.targets.f}g`;
-      document.getElementById('sumC').textContent = `${totals.c} / ${state.targets.c}g`;
-
-      const pct = state.targets.kcal > 0 ? Math.min(100, Math.round((totals.kcal / state.targets.kcal) * 100)) : 0;
-      document.getElementById('barKcal').style.width = `${pct}%`;
-
-      const list = document.getElementById('mealList');
-      list.innerHTML = '';
-      if (state.meals.length === 0) {
-        list.innerHTML = '<li class="text-xs text-slate-500 py-2">Brak dodanych posiłków.</li>';
+      const remEl = document.getElementById('remKcal');
+      const remSub = document.getElementById('remSub');
+      if (rem >= 0) {
+        remEl.textContent = `${rem}`;
+        remEl.className = 'text-4xl font-black text-emerald-400 tabular-nums leading-none mt-1';
+        remSub.textContent = `z ${goal} kcal celu`;
       } else {
-        state.meals.forEach((m, idx) => {
-          const li = document.createElement('li');
-          li.className = 'flex items-center justify-between bg-slate-950/80 border border-slate-800/80 rounded-xl px-3 py-2';
-          li.innerHTML = `
-            <div>
-              <div class="font-medium text-slate-100">${m.name || 'Posiłek'}</div>
-              <div class="text-[11px] text-slate-400 tabular-nums">${m.kcal} kcal · B: ${m.p}g · T: ${m.f}g · W: ${m.c}g</div>
-            </div>
-            <button data-idx="${idx}" class="btnDel text-xs px-2 py-1 rounded-lg bg-rose-500/15 text-rose-300 hover:bg-rose-500/25">Usuń</button>
-          `;
-          list.appendChild(li);
-        });
+        remEl.textContent = `+${Math.abs(rem)}`;
+        remEl.className = 'text-4xl font-black text-rose-400 tabular-nums leading-none mt-1';
+        remSub.textContent = `ponad cel ${goal} kcal`;
       }
 
-      document.querySelectorAll('.btnDel').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.meals.splice(Number(btn.dataset.idx), 1);
-          saveState();
-          render();
-        });
-      });
+      document.getElementById('eatenKcal').textContent = `${eaten}`;
+      document.getElementById('entryCount').textContent = `${items.length}`;
 
-      calcSuggested();
+      let sum7 = 0;
+      for (let i = -6; i <= 0; i++) {
+        const dItems = getDayItems(dayKey(i));
+        sum7 += dItems.reduce((s, x) => s + (Number(x.kcal) || 0), 0);
+      }
+      document.getElementById('avg7Kcal').textContent = `${Math.round(sum7 / 7)}`;
+
+      const pct = goal > 0 ? Math.min(100, Math.max(0, (eaten / goal) * 100)) : 0;
+      const bar = document.getElementById('progBar');
+      bar.style.width = `${pct}%`;
+      bar.className = eaten > goal
+        ? 'h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all duration-300'
+        : 'h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-300';
+
+      const favBox = document.getElementById('favContainer');
+      const favList = document.getElementById('favList');
+      favList.innerHTML = '';
+      if (state.favs.length > 0) {
+        favBox.classList.remove('hidden');
+        state.favs.forEach((f, idx) => {
+          const chip = document.createElement('div');
+          chip.className = 'inline-flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1 text-xs';
+          chip.innerHTML = `
+            <button data-fidx="${idx}" class="useFav text-slate-200 hover:text-emerald-300 font-medium tabular-nums">${f.name} • <span class="text-emerald-400 font-bold">${f.kcal}</span></button>
+            <button data-delfav="${idx}" class="delFav text-slate-500 hover:text-rose-400 ml-1">×</button>
+          `;
+          favList.appendChild(chip);
+        });
+
+        document.querySelectorAll('.useFav').forEach(b => {
+          b.addEventListener('click', () => {
+            const f = state.favs[Number(b.dataset.fidx)];
+            if (f) addEntry(f.name, f.kcal);
+          });
+        });
+        document.querySelectorAll('.delFav').forEach(b => {
+          b.addEventListener('click', () => {
+            state.favs.splice(Number(b.dataset.delfav), 1);
+            save();
+            render();
+          });
+        });
+      } else {
+        favBox.classList.add('hidden');
+      }
+
+      const ul = document.getElementById('itemList');
+      ul.innerHTML = '';
+      if (items.length === 0) {
+        ul.innerHTML = '<li class="text-xs text-slate-500 py-3 text-center">Brak wpisów w tym dniu. Dodaj kalorie wyżej lub użyj szybkich przycisków.</li>';
+      } else {
+        [...items].reverse().forEach((it) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between bg-slate-950/85 border border-slate-800/80 rounded-2xl px-3.5 py-2.5';
+          li.innerHTML = `
+            <div>
+              <div class="text-sm font-semibold text-slate-100">${it.name}</div>
+              <div class="text-xs text-emerald-400 font-bold tabular-nums">${it.kcal} kcal</div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button data-clone="${it.id}" title="Powiel wpis" class="btnClone px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs text-cyan-300 font-semibold">+1</button>
+              <button data-del="${it.id}" title="Usuń wpis" class="btnDel px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs text-rose-300 font-semibold">Usuń</button>
+            </div>
+          `;
+          ul.appendChild(li);
+        });
+
+        document.querySelectorAll('.btnClone').forEach(b => {
+          b.addEventListener('click', () => {
+            const found = items.find(x => x.id === b.dataset.clone);
+            if (found) addEntry(found.name, found.kcal);
+          });
+        });
+
+        document.querySelectorAll('.btnDel').forEach(b => {
+          b.addEventListener('click', () => {
+            state.days[k] = items.filter(x => x.id !== b.dataset.del);
+            save();
+            render();
+          });
+        });
+      }
     }
 
-    ['targetKcal', 'targetP', 'targetF', 'targetC'].forEach(id => {
-      document.getElementById(id).addEventListener('input', () => {
-        state.targets = {
-          kcal: Number(document.getElementById('targetKcal').value) || 0,
-          p: Number(document.getElementById('targetP').value) || 0,
-          f: Number(document.getElementById('targetF').value) || 0,
-          c: Number(document.getElementById('targetC').value) || 0
-        };
-        saveState();
-        render();
+    function syncGramsCalc() {
+      const per100 = parseFloat(document.getElementById('kcalPer100').value);
+      const grams = parseFloat(document.getElementById('portionGrams').value);
+      if (!isNaN(per100) && !isNaN(grams) && per100 >= 0 && grams >= 0) {
+        document.getElementById('itemKcal').value = Math.round((per100 * grams) / 100);
+      }
+    }
+
+    document.getElementById('toggleGrams').addEventListener('click', () => {
+      const gp = document.getElementById('gramsPanel');
+      gp.classList.toggle('hidden');
+      gp.classList.toggle('grid');
+    });
+
+    document.getElementById('kcalPer100').addEventListener('input', syncGramsCalc);
+    document.getElementById('portionGrams').addEventListener('input', syncGramsCalc);
+
+    document.getElementById('btnAddItem').addEventListener('click', () => {
+      const nameEl = document.getElementById('itemName');
+      const kcalEl = document.getElementById('itemKcal');
+      addEntry(nameEl.value, kcalEl.value);
+      nameEl.value = '';
+      kcalEl.value = '';
+      document.getElementById('portionGrams').value = '';
+    });
+
+    document.getElementById('btnSaveFav').addEventListener('click', () => {
+      const name = (document.getElementById('itemName').value || 'Szybki szablon').trim();
+      const kcal = Math.round(Number(document.getElementById('itemKcal').value) || 0);
+      if (kcal <= 0) return;
+      state.favs.unshift({ name, kcal });
+      state.favs = state.favs.slice(0, 8);
+      save();
+      render();
+    });
+
+    document.querySelectorAll('.quickKcal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = Number(btn.dataset.delta) || 0;
+        addEntry(`Szybkie +${d} kcal`, d);
       });
     });
 
-    document.getElementById('btnAddMeal').addEventListener('click', () => {
-      const name = document.getElementById('mealName').value.trim();
-      const kcal = Number(document.getElementById('mealKcal').value) || 0;
-      const p = Number(document.getElementById('mealP').value) || 0;
-      const f = Number(document.getElementById('mealF').value) || 0;
-      const c = Number(document.getElementById('mealC').value) || 0;
-      if (!name && kcal === 0 && p === 0 && f === 0 && c === 0) return;
-
-      state.meals.push({ name: name || 'Posiłek', kcal, p, f, c });
-      document.getElementById('mealName').value = '';
-      document.getElementById('mealKcal').value = '';
-      document.getElementById('mealP').value = '';
-      document.getElementById('mealF').value = '';
-      document.getElementById('mealC').value = '';
-      saveState();
+    document.getElementById('btnCopyPrev').addEventListener('click', () => {
+      const prevItems = getDayItems(dayKey(offset - 1));
+      if (prevItems.length === 0) return;
+      const curItems = getDayItems(dayKey(offset));
+      prevItems.forEach(x => {
+        curItems.push({
+          id: Date.now() + Math.random().toString(36).slice(2, 6),
+          name: x.name,
+          kcal: x.kcal
+        });
+      });
+      save();
       render();
     });
 
-    ['calcWeight', 'calcHeight', 'calcAge', 'calcActivity', 'calcGoal'].forEach(id => {
-      document.getElementById(id).addEventListener('input', calcSuggested);
-      document.getElementById(id).addEventListener('change', calcSuggested);
-    });
-
-    document.getElementById('btnApplyTarget').addEventListener('click', () => {
-      const kcal = calcSuggested();
-      state.targets.kcal = kcal;
-      state.targets.p = Math.round(kcal * 0.28 / 4);
-      state.targets.f = Math.round(kcal * 0.30 / 9);
-      state.targets.c = Math.max(0, Math.round((kcal - state.targets.p * 4 - state.targets.f * 9) / 4));
-      saveState();
+    document.getElementById('btnClearDay').addEventListener('click', () => {
+      state.days[dayKey(offset)] = [];
+      save();
       render();
     });
 
-    document.getElementById('btnReset').addEventListener('click', () => {
-      state = structuredClone(defaultState);
-      saveState();
+    document.getElementById('btnPrev').addEventListener('click', () => { offset -= 1; render(); });
+    document.getElementById('btnNext').addEventListener('click', () => { offset += 1; render(); });
+    document.getElementById('btnToday').addEventListener('click', () => { offset = 0; render(); });
+
+    document.getElementById('wStart').value = state.profile.wStart;
+    document.getElementById('hCm').value = state.profile.hCm;
+    document.getElementById('ageYr').value = state.profile.ageYr;
+    document.getElementById('sexSel').value = state.profile.sex;
+    document.getElementById('actSel').value = state.profile.act;
+    document.getElementById('wGoal').value = state.profile.wGoal;
+    document.getElementById('deltaRange').value = state.profile.delta;
+
+    ['wStart', 'hCm', 'ageYr', 'sexSel', 'actSel', 'wGoal', 'deltaRange'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateCalc);
+      document.getElementById(id).addEventListener('change', updateCalc);
+    });
+
+    document.getElementById('btnApplyGoal').addEventListener('click', () => {
+      state.goalKcal = updateCalc();
+      save();
       render();
+    });
+
+    document.getElementById('btnExport').addEventListener('click', () => {
+      document.getElementById('ioBox').value = JSON.stringify(state);
+    });
+
+    document.getElementById('btnImport').addEventListener('click', () => {
+      try {
+        const raw = document.getElementById('ioBox').value.trim();
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        state = {
+          ...structuredClone(baseState),
+          ...parsed,
+          days: parsed.days || {},
+          favs: Array.isArray(parsed.favs) ? parsed.favs : baseState.favs,
+          profile: { ...baseState.profile, ...(parsed.profile || {}) }
+        };
+        save();
+        render();
+        updateCalc();
+      } catch {}
+    });
+
+    document.getElementById('btnFactoryReset').addEventListener('click', () => {
+      state = structuredClone(baseState);
+      offset = 0;
+      save();
+      document.getElementById('wStart').value = state.profile.wStart;
+      document.getElementById('hCm').value = state.profile.hCm;
+      document.getElementById('ageYr').value = state.profile.ageYr;
+      document.getElementById('sexSel').value = state.profile.sex;
+      document.getElementById('actSel').value = state.profile.act;
+      document.getElementById('wGoal').value = state.profile.wGoal;
+      document.getElementById('deltaRange').value = state.profile.delta;
+      render();
+      updateCalc();
     });
 
     render();
+    updateCalc();
   </script>
 </body>
 </html>
